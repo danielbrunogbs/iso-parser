@@ -6,7 +6,7 @@
 
 namespace App\Isos;
 
-class Adiq implements IsoContract
+class Adiq
 {
 
     const VARIABLE_LENGTH = TRUE;

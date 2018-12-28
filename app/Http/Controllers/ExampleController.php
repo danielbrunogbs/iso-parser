@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Parser;
+use App\Isos\Adiq;
 use Illuminate\Support\Facades\Log;
 
 class ExampleController extends Controller
@@ -15,9 +16,9 @@ class ExampleController extends Controller
 
         Log::info($data);
 
-        $parser->verification($data);
+        $parser->set($data);
 
-        return $parser->iso();
+        return $parser->iso((new Adiq)->getIso());
 
     }
 }
