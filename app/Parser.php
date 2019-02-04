@@ -108,7 +108,7 @@ class Parser
 					//PEGAR O CONTEÚDO A PARTIR DA POSIÇÃO SOMADA COM O TAMANHO DO (TAMANHO) DO BIT
 					$content = substr($content_iso, $point + $length_length, $length);
 
-					array_push($get, [$bit => $content]); //ARMAZENANDO O BIT JUNTO COM O CONTEÚDO DENTRO DE UM ARRAY
+					$get[$bit] = $content; //ARMAZENANDO O BIT JUNTO COM O CONTEÚDO DENTRO DE UM ARRAY
 
 					$point = $point + $length_length + $length; //SOMANDO A POSIÇÃO COM O TAMANHO DO BIT MAIS O TAMANHO DO CONTEÚDO
 
@@ -124,7 +124,7 @@ class Parser
 					//PEGAR CONTEÚDO A PARTIR DA POSIÇÃO
 					$content = substr($content_iso, $point, $length);
 
-					array_push($get, [$bit => $content]); //ARMAZENANDO O BIT JUNTO COM O CONTEÚDO DENTRO DE UM ARRAY
+					$get[$bit] = $content; //ARMAZENANDO O BIT JUNTO COM O CONTEÚDO DENTRO DE UM ARRAY
 
 					$point = $point + $length; //SOMA A POSIÇÃO JUNTO COM O TAMANHO DO CONTEÚDO DO BIT
 
