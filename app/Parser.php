@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\Log;
 class Parser
 {
 	protected $data;
+	protected $bit = [];
+
+	#### LEITURA DA ISO ####
 
 	public function set($string)
 	{
@@ -134,4 +137,18 @@ class Parser
 
 		return $get;
 	}
+
+	//ANTES DE PEGAR O VALOR DO BIT, VERIFICA SE O MESMO EXISTE!
+	public function get($bit)
+	{
+		return isset($this->parser[$bit]) ? $this->parser[$bit] : 'BIT '.$bit.' não encontrado!';
+	}
+
+	#### LEITURA DA ISO ####
+
+	########################
+
+	#### CIRAÇÃO DA ISO ####
+
+	//
 }

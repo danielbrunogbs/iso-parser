@@ -11,12 +11,20 @@ class CommunicationTest extends Parser
 	public function __construct($parser)
 	{
 		$this->parser = $parser;
+	}
 
-		$this->process();
+	public function success()
+	{
+		//CRIAR FUNÇÃO DE RESPOSTA
 	}
 
 	public function process()
 	{
-		return dd($this->parser);
+		$response = $this->success();
+
+		return [
+			'forwarding' => false,
+			'payload' => $response->get_iso()
+		];
 	}
 }

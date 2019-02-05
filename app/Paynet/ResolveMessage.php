@@ -13,16 +13,16 @@ class ResolveMessage extends Parser
 	public function resolve($message)
 	{
 		$this->data = $message;
-		dd($this->iso(Paynet::getIso()));
 
 		switch ($this->mti()) {
 
-			case '9102':
-				return new PaynetCommunicationTest($this->iso(Paynet::getIso()));
+			case '0420':
+				$parser = $this->iso(Paynet::getIso());
+				return (new PaynetCommunicationTest($parser))->process();
 				break;
 			
 			default:
-				return false;
+				return null;
 				break;
 		
 		}
