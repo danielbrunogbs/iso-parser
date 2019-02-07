@@ -18,7 +18,7 @@ class Paynet
     {
         return [
             1   => ['b',   32,  self::FIXED_LENGTH],
-            2   => ['ans',  99,  self::VARIABLE_LENGTH],
+            2   => ['a',  99,  self::VARIABLE_LENGTH],
             3   => ['n',   6,   self::FIXED_LENGTH],
             4   => ['n',   12,  self::FIXED_LENGTH],
             5   => ['n',   12,  self::FIXED_LENGTH],

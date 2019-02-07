@@ -3,6 +3,7 @@
 namespace App\Paynet\Messages;
 
 use App\Parser;
+use App\Isos\Paynet;
 
 class CommunicationTest extends Parser
 {
@@ -15,16 +16,28 @@ class CommunicationTest extends Parser
 
 	public function success()
 	{
-		//CRIAR FUNÇÃO DE RESPOSTA
+		$this->set_iso(Paynet::getIso());
+
+		$this->add_mti('0810');
+		$this->data(7, $this->get(7));
+		$this->data(11, $this->get(11));
+		$this->data(12, $this->get(12));
+		$this->data(13, $this->get(13));
+		$this->data(39, '00');
+		$this->data(41, $this->get(41));
+		$this->data(42, $this->get(42));
+		$this->data(62, 'CONECTADO COM SUCESSO');
+		
+		return true;
 	}
 
 	public function process()
 	{
-		$response = $this->success();
+		$response = $this->success() ? $this->get_iso() : false;
 
 		return [
 			'forwarding' => false,
-			'payload' => $response->get_iso()
+			'payload' => $response
 		];
 	}
 }

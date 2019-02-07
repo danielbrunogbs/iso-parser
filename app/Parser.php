@@ -7,13 +7,21 @@ use Illuminate\Support\Facades\Log;
 class Parser
 {
 	protected $data;
-	protected $bit = [];
+	protected $iso;
+	protected $bits = [];
+	protected $bitmap;
+	protected $mti;
 
 	#### LEITURA DA ISO ####
 
 	public function set($string)
 	{
 		$this->data = $string;
+	}
+
+	public function set_iso($iso)
+	{
+		$this->iso = $iso;
 	}
 
 	public function mti()
@@ -150,5 +158,74 @@ class Parser
 
 	#### CIRAÇÃO DA ISO ####
 
-	//
+	//ADICIONAR O MTI DA MENSAGEM
+	public function add_mti($mti)
+	{
+		$this->mti = $mti; //SALVA O MTI DA TRANSAÇÃO A SER GERADA
+	}
+
+	//MONTA O BIT DE ACORDO COM A ISO UTILIZADA
+	public function data($bit_number, $content)
+	{
+		$bit = $this->iso[$bit_number]; //PEGA AS INFORAMAÇÕES DO BIT NA ISO
+		$length = null;
+		$length_length = strlen($bit[1]); //PEGA O TAMANHO DO TAMANHO PADRÃO
+
+		//VERIFICA SE O MESMO É TAMANHO VARIÁVEL OU FIXO, SE CASO FOR, ELE JÁ CALCULA O TAMANHO DA STRING E SETA O TAMANHO
+		if($bit[2])
+			$length = str_pad(strlen($content),$length_length,0,STR_PAD_LEFT);
+
+		$this->bits[$bit_number] = ['length' => $length, 'content' => $content]; //SALVA AS INFORMAÇÕES NA ARRAY
+	}
+
+	//CONVERTER O BITMAP PARA HEXA
+	public function make_bitmap()
+	{
+		$bitmap = null;
+
+		for($i = 0;$i <= 127;$i++)
+		{
+			$converter = $this->bitmap[$i] . $this->bitmap[$i + 1] . $this->bitmap[$i + 2] . $this->bitmap[$i + 3];
+			$i = $i + 3;
+
+			//dd($converter);
+
+			$base = base_convert($converter, 2, 16);
+			$bitmap .= $base;
+		}
+
+		//VERIFICA SE É NECESSÁRIO ENVIAR O SEGUNDO MAPA DE BITS
+		if($this->bitmap[0] == 0)
+			$bitmap = substr($bitmap,0,16);
+
+		return $bitmap;
+	}
+
+	//MONTA A MENSAGEM DE RESPOSTA
+	public function get_iso()
+	{
+		//SE A VARIÁVEL BITMAP ESTIVER VAZIA, COLOCAR OS VALORES PADRÕES
+		if(empty($this->bitmap))
+			$this->bitmap = str_pad(0,128,0);
+
+		$content = null;
+
+		//ADICIONA TODOS OS BITS NO BITMAP
+		foreach($this->bits as $bit => $param)
+		{
+			//QUANDO ENCONTRAR UM BIT MAIOR QUE 64 (PRIMEIRO MAPA DE BITS) ELE INCLUI O SEGUNDO MAPA DE BITS
+			if($bit > 64)
+				$this->bitmap[0] = 1;
+
+			$bit_position = $bit - 1; //POSIÇÃO REAL DO BIT
+			$this->bitmap[$bit_position] = 1;
+
+			//MONTA O CONTEÚDO DA MENSAGEM
+			$content .= $param['length'].$param['content'];
+		}
+
+		$bitmap = $this->make_bitmap();
+
+		return $this->mti.$bitmap.$content;
+	}
 }
