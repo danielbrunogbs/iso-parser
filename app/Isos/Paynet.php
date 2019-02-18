@@ -144,7 +144,8 @@ class Paynet
             125 => ['ans', 999,  self::VARIABLE_LENGTH],
             126 => ['ans', 999,   self::VARIABLE_LENGTH],
             127 => ['ans', 999, self::VARIABLE_LENGTH],
-            128 => ['b',   16,  self::FIXED_LENGTH]
+            128 => ['b',   16,  self::FIXED_LENGTH],
+            129 => ['b',   999,  self::VARIABLE_LENGTH]
         ];
     }
 }
