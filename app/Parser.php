@@ -11,6 +11,7 @@ class Parser
 	protected $bits = [];
 	protected $bitmap;
 	protected $mti;
+	protected $point_content;
 
 	#### LEITURA DA ISO ####
 
@@ -31,24 +32,43 @@ class Parser
 
 	private function bitmap()
 	{
-		//PEGA O BITMAP ATRAVÉS DAS POSIÇÕES
-		$bitmap = ['first' => substr($this->data,4,16), 'second' => substr($this->data,20,16)];
-		$bits = []; //VARIÁVEL PARA ARMAZENAGEM
+		$point = 4; //POSIÇÃO INICIAL
+		$length = 16; //TAMANHO FIXO DO BITMAP
+		$bitmaps = []; //VARIÁVEL DE ARMAZENAGEM
+		$bits = []; //VARIÁVEL DE ARMAZENAGEM
 
-		foreach($bitmap as $map) //LÊ A ARRAY ARMAZENANDO O BITMAP 1 E 2
+		//BUSCA TODOS OS BITMAPS PRESENTES NA MENSAGEM
+		for($stop = 0; $stop != 1; $point += 16)
 		{
-			$array = str_split($map); //TRANSFORMA A STRING E ARRAY
-			$binary = ''; //VARIÁVEL PARA ARMAZENAGEM
+			$bitmap = substr($this->data, $point, $length);
+			$first_bit = substr($this->data, $point, 1);
+			$converted = base_convert($first_bit, 16, 2);
+			$converted = str_pad($converted, 4, 0, STR_PAD_LEFT);
+			$first_position = substr($converted, 0, 1);
 
-			foreach($array as $bit) //PEGA O BITMAP DA $ARRAY E LÊ CADA CARACTER
+			$bitmaps[] = $bitmap;
+
+			if($first_position == 0)
+				$stop = 1;
+		}
+
+		$this->point_content = $point; //SETA A POSIÇÃO PARA O CONTEÚDO CORRETO DA MENSAGEM
+
+		//PEGA OS BITMAPS PRESENTES NA ARRAY
+		foreach($bitmaps as $key => $bitmap)
+		{
+			$split = str_split($bitmap);
+			$binary = null;
+
+			foreach($split as $bit)
 			{
-				$convert = base_convert($bit,16,2); //CONVERTE EM BINÁRIO
-				$convert = str_pad($convert,4,0,STR_PAD_LEFT); //MANTÉM O TAMANHO DE 4 CARACTERES COM 0 ALINHADO A ESQUERDA
+				$convert = base_convert($bit, 16, 2);
+				$convert = str_pad($convert, 4, 0, STR_PAD_LEFT);
 
-				$binary .= $convert; //ACRESCENTA A VARIÁVEL $CONVERT NA VARIÁVEL DE ARMAZENAGEM
+				$binary .= $convert;
 			}
 
-			array_push($bits,$binary); //ARMAZENA O BITMAP CONVERTIDO EM BINÁRIO NA ARRAY
+			$bits[$key] = $binary;
 		}
 
 		return $bits;
@@ -58,7 +78,7 @@ class Parser
 	{
 		$string = $this->data; //PEGA A O VALOR SALVO NO ATRIBUTO
 
-		return substr($string,36); //PEGA O CONTEÚDO A PARTIR DA 36° POSIÇÃO
+		return substr($string, $this->point_content); //PEGA O CONTEÚDO A PARTIR DA 36° POSIÇÃO
 	}
 
 	private function bits()
