@@ -76,7 +76,7 @@ class Parser
 	{
 		$string = $this->data; //PEGA A O VALOR SALVO NO ATRIBUTO
 
-		return substr($string, $this->point_content); //PEGA O CONTEÚDO A PARTIR DA 36° POSIÇÃO
+		return substr($string, $this->point_content); //PEGA O CONTEÚDO A PARTIR DA POSIÇÃO
 	}
 
 	private function bits()
@@ -208,12 +208,19 @@ class Parser
 			}
 		}
 
+		//SE CASO O VALOR NÃO FOR VARIÁVEL UTILIZAR O TAMANHO PADRÃO PARA PEGAR O CONTEÚDO
 		$length = $this->iso[$bit_number][1];
 
+		//SE CASO FOR VARIÁVEL, CALCULAR O TAMANHO DO CONTEÚDO PARA ENVIAR
 		if($this->iso[$bit_number][2])
 			$length = str_pad(strlen($content), strlen($this->iso[$bit_number][1]), 0, STR_PAD_LEFT);
 
+		//PEGA O CONTEÚDO DE ACORDO COM O TAMANHO
 		$content = substr($content, 0, $length);
+
+		//SE CASO O TAMANHO FOR FIXO, LIMPA A VARIÁVEL, POIS O VALOR NÃO DEVE ESTAR PRESENTE NA ISO
+		if(!$this->iso[$bit_number][2])
+			$length = null;
 
 		$this->bits[$bit_number] = ['bit' => $bit_number, 'length' => $length, 'content' => $content];
 	}
@@ -243,26 +250,32 @@ class Parser
 			$bitmaps[$key - 1] = 1;
 		}
 
-		$bitmap_split = str_split($bitmaps);
-		$bitmap = null;
+		$count = 64 * $this->count_bitmap; //CALCULO QUANTOS BITMAPS VOU CONVERTER
+		$bitmap = str_pad('', (16 * $this->count_bitmap), 0); //MONTO O TAMANHO DE BITMAP (HEXADECIMAL)
+		$bitmap_position = 0; //VARIÁVEL PARA CONTAGEM (POSICIONAR CORRETAMENTE OS BYTES)
 
-		foreach($bitmap_split as $key => $bit)
+		//USO O CALCULO DE TODOS OS BITMAPS E VOU CONVERTENDO DE 4 EM 4 FECHANDO NO TOTAL DE 16 LOOPS (SE CASO 1 BITMAP)
+		for($i = 0;$i < $count;$i++)
 		{
-			if($key < count($bitmap_split))
-			{
-				$string = $bitmap_split[$key] . $bitmap_split[$key + 1] . $bitmap_split[$key + 2] . $bitmap_split[$key + 3];
-				$key = $key + 3;
-				$bitmap .= base_convert($string, 2, 16);
-			}
+			$format = $bitmaps[$i] . $bitmaps[$i + 1] . $bitmaps[$i + 2] . $bitmaps[$i + 3];
+			$bitmap[$bitmap_position] = base_convert($format, 2, 16);
+			$i += 3;
+			$bitmap_position++;
 		}
 
-		dd($bitmap);
+		return $bitmap;
 	}
 
 	//MONTA A MENSAGEM DE RETORNO
 	public function get_iso()
 	{
+		$mti = $this->mti;
 		$bitmap = $this->make_bitmap();
-		dd($bitmap);
+		$content = null;
+
+		foreach($this->bits as $bit)
+			$content .= $bit['length'] . $bit['content'];
+
+		return $mti . $bitmap . $content;
 	}
 }

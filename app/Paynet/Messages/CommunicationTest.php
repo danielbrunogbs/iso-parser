@@ -27,7 +27,6 @@ class CommunicationTest extends Parser
 		$this->data(41, $this->get(41));
 		$this->data(42, $this->get(42));
 		$this->data(62, 'CONECTADO COM SUCESSO');
-		$this->data(129, 'TESTE');
 
 		return true;
 	}
