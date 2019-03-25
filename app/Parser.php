@@ -6,7 +6,8 @@ use Illuminate\Support\Facades\Log;
 
 class Parser
 {
-	protected $data;
+	public $data;
+	protected $iso_bits = [];
 	protected $iso;
 	protected $bitmap;
 	protected $point_content;
@@ -161,13 +162,13 @@ class Parser
 			}
 		}
 
-		return $get;
+		$this->iso_bits = $get;
 	}
 
 	//ANTES DE PEGAR O VALOR DO BIT, VERIFICA SE O MESMO EXISTE!
 	public function get($bit)
 	{
-		return isset($this->parser[$bit]) ? $this->parser[$bit] : 'BIT '.$bit.' não encontrado!';
+		return isset($this->iso_bits[$bit]) ? $this->iso_bits[$bit] : 'BIT '.$bit.' não encontrado!';
 	}
 
 	#### LEITURA DA ISO ####

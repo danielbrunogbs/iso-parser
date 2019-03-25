@@ -8,20 +8,22 @@ use App\Parser;
 //MESSAGES
 use App\Paynet\Messages\CommunicationTest as PaynetCommunicationTest;
 
-class ResolveMessage extends Parser
+class ResolveMessage
 {
 	public function resolve($message)
 	{
+		$isoParser = new Parser();
+
 		//SALVA A MENSAGEM QUE SERÁ REALIZADO A PARSE
-		$this->data = $message;
+		$isoParser->set($message);
 
 		//ISOS UTILIZADAS DURANTE AS TROCAS DE MENSAGENS
-		$paynet = $this->iso(Paynet::getIso());
+		$isoParser->iso(Paynet::getIso());
 
-		switch ($this->mti()) {
+		switch ($isoParser->mti()) {
 
 			case '0800':
-				return (new PaynetCommunicationTest($paynet))->process();
+				return (new PaynetCommunicationTest($isoParser))->process();
 				break;
 			
 			default:
