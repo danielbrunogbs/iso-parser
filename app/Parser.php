@@ -9,115 +9,124 @@ class Parser
 	public $data;
 	protected $iso_bits = [];
 	protected $iso;
-	protected $bitmap;
-	protected $point_content;
+	protected $content;
 
-	#### LEITURA DA ISO ####
+	public function __construct($iso = null)
+	{
+		//Forma interativa de iserir a iso
+		if($iso)
+			$this->setIso($iso);
+	}
 
-	public function set($string)
+	public function setMessage($string)
 	{
 		$this->data = $string;
 	}
 
-	public function set_iso($iso)
+	public function setIso($iso)
 	{
 		$this->iso = $iso;
 	}
 
-	public function mti()
+	#### LEITURA DA ISO ####
+
+	public function getMTI()
 	{
 		return substr($this->data,0,4);
 	}
 
 	private function bitmap()
 	{
-		$point = 4; //POSIÇÃO INICIAL
-		$length = 16; //TAMANHO FIXO DO BITMAP
-		$bitmaps = []; //VARIÁVEL DE ARMAZENAGEM
-		$bits = []; //VARIÁVEL DE ARMAZENAGEM
+		$end = 4; //Ponto final de onde deve começar a busca (pulando o MTI da mensagem)
+		$bitmaps = []; //Array para armazenar os bitmaps convertidos
+		$bitmap_length = 16; //Quantidade inicial para somente um bitmap presente na mensagem
+		$stop = 0; //Variável para encerrar o looping
 
-		//BUSCA TODOS OS BITMAPS PRESENTES NA MENSAGEM
-		for($stop = 0; $stop != 1; $point += 16)
+		//Variáveis usadas para fazer a verificação somente 2x (usamos somente 2 mapas de bitmap)
+		$step = 1;
+		$step_limit = env('AMOUNT_BITMAPS', 2); //Setado no env para trabalhar de forma flexível
+
+		//Verificar se tem 1 ou 2 bitmaps presente na mensagem
+		while($stop != 1) //Parar o looping quando encontrar todos os bitmaps
 		{
-			$bitmap = substr($this->data, $point, $length);
-			$first_bit = substr($this->data, $point, 1);
-			$converted = base_convert($first_bit, 16, 2);
-			$converted = str_pad($converted, 4, 0, STR_PAD_LEFT);
-			$first_position = substr($converted, 0, 1);
+			$string = $this->data;
+			$bitmap = substr($string, $end, $bitmap_length);
 
-			$bitmaps[] = $bitmap;
+			//Converte o primeiro byte do bitmap para binário
+			$first = base_convert($bitmap[0], 16, 2);
+			$first = str_pad($first, 4, 0, STR_PAD_LEFT);
 
-			if($first_position == 0)
-				$stop = 1;
-		}
+			//Verifica se o primeiro caractér do byte é igual a 1 (indicando a presença de outro bitmap)
+			($first[0] == 1) ? $end += 16 : $stop = 1;
 
-		$this->point_content = $point; //SETA A POSIÇÃO PARA O CONTEÚDO CORRETO DA MENSAGEM
-
-		//PEGA OS BITMAPS PRESENTES NA ARRAY
-		foreach($bitmaps as $key => $bitmap)
-		{
-			$split = str_split($bitmap);
-			$binary = null;
-
-			foreach($split as $bit)
+			//Verifica a quantidade de vezes que já foi feita a verificacão
+			if($step <= $step_limit)
 			{
-				$convert = base_convert($bit, 16, 2);
-				$convert = str_pad($convert, 4, 0, STR_PAD_LEFT);
+				//Faz a leitura dos caracteres do bitmap, converte para binário e armazena na array
+				$bitmap = str_split($bitmap);
+				$bitmaps[$step] = null;
 
-				$binary .= $convert;
+				foreach($bitmap as $byte)
+				{
+					$bit = base_convert($byte, 16, 2);
+					$bit = str_pad($bit, 4, 0, STR_PAD_LEFT);
+
+					$bitmaps[$step] .= $bit;
+				}
+
+				$step++;
 			}
-
-			$bits[$key] = $binary;
+			else
+			{
+				$stop = 1;
+			}
 		}
 
-		return $bits;
-	}
+		//Pega o resto da mensagem ignorando o MTI e BITMAP (conteúdo, 16 x 2 + 4)
+		$this->content = substr($this->data, ($bitmap_length * count($bitmaps)) + 4);
 
-	private function content()
-	{
-		$string = $this->data; //PEGA A O VALOR SALVO NO ATRIBUTO
-
-		return substr($string, $this->point_content); //PEGA O CONTEÚDO A PARTIR DA POSIÇÃO
+		return $bitmaps;
 	}
 
 	private function bits()
 	{
-		$bitmap = $this->bitmap(); //PEGA OS BITMAP EM BINÁRIO
-		$bits = []; //VARIÁVEL PARA ARMAZENAGEM
-		$bit_number = 0; //VARIÁVEL QUE INDICA O NUMÉRO DO BIT
+		$bitmap = $this->bitmap(); //Pega o array contendo os bitmaps em binário
+		$bits = []; //Array para armazenar os bits recolidos do conteúdo
+		$bit_number = 0; //Indicador do número do bit
 
-		foreach($bitmap as $map) //FAZ A LEITURA DA ARRAY $BITMAP NA QUAL CONTEM OS BITMAP
+		foreach($bitmap as $map) //Faz a leitura da quantidade de bitmaps retornados
 		{
-			$array = str_split($map); //TRANSFORMA A STRING E ARRAY
+			$array = str_split($map); //Separa a string para fazer a leitura de cada caractér
 
-			foreach($array as $key => $bit) //LÊ CADA CARACTER DA $ARRAY
+			foreach($array as $key => $bit)
 			{
-
-				if($bit_number == 0) //TRANSFORMAR O VALOR 0 EM 1 POIS O BIT NÃO COMEÇA COM 0 E SIM EM 1
+				//Não pode seguir o padrão de chaves da array, logo precisamos pular um digito a frente
+				if($bit_number == 0)
 				{
 					$bit_number = 1;
 				}
 				else
 				{
-					$bit_number = $bit_number + 1; //SOMA +1 PARA MONSTRAR A POSIÇÃO REAL DO BIT
+					//Realiza a soma de 1 para indicar a posição correta do BIT
+					$bit_number++;
 				}
 
-				//SE O BIT FOR IGUAL A 1 QUER DIZER QUE ESTÁ PRESENTE
+				//Se o caracter referente ao BIT for igual a 1 indica que está presente e é salvo na array
 				if($bit == 1)
-					array_push($bits,$bit_number); //ENTÃO É SALVO NA ARRAY
-
+					array_push($bits, $bit_number);
 			}
 		}
 
 		return $bits;
 	}
 
-	public function iso($iso)
+	private function iso()
 	{
-		$bits = $this->bits(); //PEGAR BITS
-		$content_iso = $this->content(); //PEGAR CONTEÚDO FORA O SEGUNDO MAPA DE BITS
-		$point = 0; //VARIÁVEL PARA ARMAZENAGEM
-		$get = []; //VARIÁVEL PARA ARMAZENAGEM
+		$iso = $this->iso;
+		$bits = $this->bits(); //Pega os bits presentes na mensagem
+		$content_iso = $this->content; //Pega o conteúdo
+		$point = 0; //Último ponto de parada dentro da string do conteúdo
+		$get = []; //Armazena a chave do array de acordo com o número do bit e conteúdo do mesmo
 
 		foreach($bits as $key => $bit)
 		{
@@ -125,39 +134,39 @@ class Parser
 
 			if($bit != 1)
 			{
-				//SE CASO A 3 POSIÇÃO DA ARRAY FOR TRUE QUER DIZER QUE O TAMANHO DO BIT É VARIÁVEL CASO CONTRÁRIO É FIXO
-				if($detail[2])
-				{ //VARIÁVEL
-
-					if($key == 1) //PULAR O PRIMEIRO BIT (BITMAP) POIS ELE NÃO É COLETADO
-						$point = 0; //SETAR A POSIÇÃO ZERO
+				//Verifica se a posição consultada no array é true o false, caso true é variável, caso false, fixo
+				if($detail[2]) //Variável
+				{
+					if($key == 1) //Pular o primeiro BIT pois é só indicação do segundo mapa de BITS
+						$point = 0;
 					
-					$length_length = strlen($detail[1]); //CALCULAR O TAMANHO DO (TAMANHO) DO BIT
-					$length = substr($content_iso, $point, $length_length); //PEGAR O VALOR REFERENTE AO TAMANHO DO CONTEÚDO
+					//Calcular a quantidade de caracteres do tamanho do BIT
+					$length_length = strlen($detail[1]);
+					//Pegar o conteúdo
+					$length = substr($content_iso, $point, $length_length);
 					
-					//PEGAR O CONTEÚDO A PARTIR DA POSIÇÃO SOMADA COM O TAMANHO DO (TAMANHO) DO BIT
+					//Pegar o conteúdo pulando os caracteres do tamanho do BIT e o último ponto de parada
 					$content = substr($content_iso, $point + $length_length, $length);
 
-					$get[$bit] = $content; //ARMAZENANDO O BIT JUNTO COM O CONTEÚDO DENTRO DE UM ARRAY
+					//Armazena o BIT como chave de array e conteúdo dentro da chave (facilitar na consulta)
+					$get[$bit] = $content;
 
-					$point = $point + $length_length + $length; //SOMANDO A POSIÇÃO COM O TAMANHO DO BIT MAIS O TAMANHO DO CONTEÚDO
-
+					//Soma a última posição com a quantidade de caracteres do tamanho e o tamanho do conteúdo do BIT
+					$point = $point + $length_length + $length;
 				}
-				else
-				{ //FIXO
-					
-					if($key == 1) //PULAR O PRIMEIRO BIT (BITMAP) POIS ELE NÃO É COLETADO
-						$point = 0; //SETAR A POSIÇÃO ZERO
+				else //Fixo
+				{	
+					if($key == 1)
+						$point = 0;
 
-					$length = $detail[1]; //PEGANDO O TAMANHO DO CONTEÚDO FIXO
+					$length = $detail[1]; //Pegando o tamanho fixo do BIT
 
-					//PEGAR CONTEÚDO A PARTIR DA POSIÇÃO
+					//Pegar o conteúdo a partir da última posição setada
 					$content = substr($content_iso, $point, $length);
 
-					$get[$bit] = $content; //ARMAZENANDO O BIT JUNTO COM O CONTEÚDO DENTRO DE UM ARRAY
+					$get[$bit] = $content;
 
-					$point = $point + $length; //SOMA A POSIÇÃO JUNTO COM O TAMANHO DO CONTEÚDO DO BIT
-
+					$point = $point + $length;
 				}
 			}
 		}
@@ -165,10 +174,14 @@ class Parser
 		$this->iso_bits = $get;
 	}
 
-	//ANTES DE PEGAR O VALOR DO BIT, VERIFICA SE O MESMO EXISTE!
-	public function get($bit)
+	public function getBit($bit)
 	{
-		return isset($this->iso_bits[$bit]) ? $this->iso_bits[$bit] : 'BIT '.$bit.' não encontrado!';
+		//Só executar o parse da mensagem 1x
+		if(empty($this->iso_bits))
+			$this->iso();
+
+		//Antes de retornar o valor, verifica se o BIT existe dentro da array
+		return isset($this->iso_bits[$bit]) ? $this->iso_bits[$bit] : false;
 	}
 
 	#### LEITURA DA ISO ####
@@ -182,13 +195,13 @@ class Parser
 	protected $count_bitmap = 1;
 
 	//ADICIONAR O MTI DA MENSAGEM
-	public function add_mti($mti)
+	public function addMTI($mti)
 	{
 		$this->mti = $mti; //SALVA O MTI DA TRANSAÇÃO A SER GERADA
 	}
 
 	//MONTA O BIT DE ACORDO COM A ISO UTILIZADA
-	public function data($bit_number, $content)
+	public function addData($bit_number, $content)
 	{
 		$point = 64; //TAMANHO DO PRIMEIRO MAPA DE BITMAP
 		$count_bitmap = 1;
@@ -268,7 +281,7 @@ class Parser
 	}
 
 	//MONTA A MENSAGEM DE RETORNO
-	public function get_iso()
+	public function getIso()
 	{
 		$mti = $this->mti;
 		$bitmap = $this->make_bitmap();

@@ -11,8 +11,13 @@ class ExampleController extends Controller
     public function verification(Request $request, Router $router)
     {
         $data = $request->data;
+        
         Log::info($data);
 
-        return $router->routing($data);
+        $response = $router->routing($data);
+
+        Log::info($response);
+
+        return $response;
     }
 }

@@ -11,8 +11,8 @@ class Router
 		//MODEL CRIADA, CASO PRECISE DE 2 OU MAIS APLICAÇÕES EM UM SÓ ISO MODULE
 		$header = 'empty';
 
-		switch ($header) {
-
+		switch ($header)
+		{
 			case 'empty':
 				$resolve = new Paynet();
 				return $resolve->resolve($message);
@@ -21,7 +21,6 @@ class Router
 			default:
 				return false;
 				break;
-				
 		}
 	}
 }

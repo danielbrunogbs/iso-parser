@@ -8,6 +8,7 @@ use App\Isos\Paynet;
 class CommunicationTest extends Parser
 {
 	protected $parser;
+	protected $successful = true;
 
 	public function __construct(Parser $parser)
 	{
@@ -16,28 +17,44 @@ class CommunicationTest extends Parser
 
 	public function success()
 	{
-		$this->parser->set_iso(Paynet::getIso());
+		$iso = new Parser(Paynet::getIso());
 
-		$this->parser->add_mti('0810');
-		$this->parser->data(7, $this->parser->get(7));
-		$this->parser->data(11, $this->parser->get(11));
-		$this->parser->data(12, $this->parser->get(12));
-		$this->parser->data(13, $this->parser->get(13));
-		$this->parser->data(39, '00');
-		$this->parser->data(41, $this->parser->get(41));
-		$this->parser->data(42, $this->parser->get(42));
-		$this->parser->data(62, 'CONECTADO COM SUCESSO');
+		$iso->addMTI('0810');
+		$iso->addData(7, $this->parser->getBit(7));
+		$iso->addData(11, $this->parser->getBit(11));
+		$iso->addData(12, $this->parser->getBit(12));
+		$iso->addData(13, $this->parser->getBit(13));
+		$iso->addData(39, '00');
+		$iso->addData(41, $this->parser->getBit(41));
+		$iso->addData(42, $this->parser->getBit(42));
+		$iso->addData(62, 'CONECTADO COM SUCESSO');
 
-		return true;
+		return $iso;
+	}
+
+	public function error()
+	{
+		$iso = new Parser(Paynet::getIso());
+
+		$iso->addMTI('0810');
+		$iso->addData(7, $this->parser->getBit(7));
+		$iso->addData(11, $this->parser->getBit(11));
+		$iso->addData(12, $this->parser->getBit(12));
+		$iso->addData(13, $this->parser->getBit(13));
+		$iso->addData(39, '12');
+		$iso->addData(41, $this->parser->getBit(41));
+		$iso->addData(42, $this->parser->getBit(42));
+		$iso->addData(62, 'FALHA NA CONEXAO');
+
+		return $iso;
 	}
 
 	public function process()
 	{
-		$response = $this->success() ? $this->parser->get_iso() : false;
+		$response = $this->successful ? $this->success() : $this->error();
 
 		return [
-			'forwarding' => false,
-			'payload' => $response
+			'payload' => $response->getIso()
 		];
 	}
 }

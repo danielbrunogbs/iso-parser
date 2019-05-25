@@ -14,14 +14,14 @@ class ResolveMessage
 	{
 		$isoParser = new Parser();
 
-		//SALVA A MENSAGEM QUE SERÁ REALIZADO A PARSE
-		$isoParser->set($message);
+		//Seta a mensagem dentro da classe
+		$isoParser->setMessage($message);
 
-		//ISOS UTILIZADAS DURANTE AS TROCAS DE MENSAGENS
-		$isoParser->iso(Paynet::getIso());
+		//Iso que será utilizada para realizar o parse
+		$isoParser->setIso(Paynet::getIso());
 
-		switch ($isoParser->mti()) {
-
+		switch ($isoParser->getMTI())
+		{
 			case '0800':
 				return (new PaynetCommunicationTest($isoParser))->process();
 				break;
@@ -29,7 +29,6 @@ class ResolveMessage
 			default:
 				return null;
 				break;
-		
 		}
 	}
 }
