@@ -20,14 +20,14 @@ class CommunicationTest extends Parser
 		$iso = new Parser(Paynet::getIso());
 
 		$iso->addMTI('0810');
-		$iso->addData(7, $this->parser->getBit(7));
-		$iso->addData(11, $this->parser->getBit(11));
-		$iso->addData(12, $this->parser->getBit(12));
-		$iso->addData(13, $this->parser->getBit(13));
-		$iso->addData(39, '00');
-		$iso->addData(41, $this->parser->getBit(41));
-		$iso->addData(42, $this->parser->getBit(42));
-		$iso->addData(62, 'CONECTADO COM SUCESSO');
+		$iso->addBit(7, $this->parser->getBit(7));
+		$iso->addBit(11, $this->parser->getBit(11));
+		$iso->addBit(12, $this->parser->getBit(12));
+		$iso->addBit(13, $this->parser->getBit(13));
+		$iso->addBit(39, '00');
+		$iso->addBit(41, $this->parser->getBit(41));
+		$iso->addBit(42, $this->parser->getBit(42));
+		$iso->addBit(62, 'CONECTADO COM SUCESSO');
 
 		return $iso;
 	}

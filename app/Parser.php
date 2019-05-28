@@ -188,107 +188,121 @@ class Parser
 
 	########################
 
-	#### CIRAÇÃO DA ISO ####
+	#### CRIAÇÃO DA ISO ####
 
 	protected $mti;
 	protected $bits = [];
 	protected $count_bitmap = 1;
 
-	//ADICIONAR O MTI DA MENSAGEM
+	//Armazena o MTI da mensagem
 	public function addMTI($mti)
 	{
-		$this->mti = $mti; //SALVA O MTI DA TRANSAÇÃO A SER GERADA
+		$this->mti = $mti;
 	}
 
-	//MONTA O BIT DE ACORDO COM A ISO UTILIZADA
-	public function addData($bit_number, $content)
+	//Armazena o BITS utilizados na mensagem
+	public function addBit($bit, $content)
 	{
-		$point = 64; //TAMANHO DO PRIMEIRO MAPA DE BITMAP
-		$count_bitmap = 1;
+		$iso = $this->iso;
 
-		//CALCULA QUANTOS BITMAP'S VÃO ESTAR PRESENTES NA MENSAGEM
-		for($stop = 0;$stop != 1;$point += 64)
+		$detail = $iso[$bit];
+
+		//Verifica se o tamanho do BIT é variável ou fixo
+		if($detail[2]) //Variável
 		{
-			if($bit_number > $point)
-			{
-				$count_bitmap++;
+			//Calcula o tamanho do conteúdo e calcula os caracteres do tamanho (Para definir LLvar OU LLLvar)
+			$length = str_pad(strlen($content), strlen($detail[1]), 0, STR_PAD_LEFT);
 
-				if($count_bitmap > $this->count_bitmap)
-					$this->count_bitmap = $count_bitmap;
-			}
-			else
-			{
-				$stop = 1;
-			}
+			//Armazena o BIT na array
+			$this->bits[$bit] = [$bit, $length, $content];
 		}
+		else //Fixo
+		{
+			//Define o tamanho como nulo, pois já é indicado na ISO que é um tamanho fixo
+			$length = $detail[1];
 
-		//SE CASO O VALOR NÃO FOR VARIÁVEL UTILIZAR O TAMANHO PADRÃO PARA PEGAR O CONTEÚDO
-		$length = $this->iso[$bit_number][1];
+			//Pega o conteúdo de acordo com o tamanho fixo (evitar quebra de mensagem)
+			$content = substr($content, 0, $length);
 
-		//SE CASO FOR VARIÁVEL, CALCULAR O TAMANHO DO CONTEÚDO PARA ENVIAR
-		if($this->iso[$bit_number][2])
-			$length = str_pad(strlen($content), strlen($this->iso[$bit_number][1]), 0, STR_PAD_LEFT);
-
-		//PEGA O CONTEÚDO DE ACORDO COM O TAMANHO
-		$content = substr($content, 0, $length);
-
-		//SE CASO O TAMANHO FOR FIXO, LIMPA A VARIÁVEL, POIS O VALOR NÃO DEVE ESTAR PRESENTE NA ISO
-		if(!$this->iso[$bit_number][2])
-			$length = null;
-
-		$this->bits[$bit_number] = ['bit' => $bit_number, 'length' => $length, 'content' => $content];
+			//Armazena o BIT na array (tamanho enviado como nulo, pois é um tamanho fixo)
+			$this->bits[$bit] = [$bit, null, $content];
+		}
 	}
 
-	//MONTA O BITMAP
-	public function make_bitmap()
+	//Monta o BITMAP de acordo com o BITS setados na mensagem
+	public function makeBitmap()
 	{
-		$bitmaps = null;
+		$bits = $this->bits;
+		$amount = null; //Armazena a quantidade de bitmaps
 
-		//DEFINE OS BLOCOS DE BITMAP INDICANDO A PRESENÇA DOS OUTROS
-		for($i = 1;$i <= $this->count_bitmap;$i++)
+		//Calcular quantos bitmaps serão enviado na mensagem
+		$amount = max($bits)[0] / 64; //Divide o BIT pelo tamanho de um bitmap
+		$amount = (int) ceil($amount); //Depois arredonda para cima, indicando a quantidade de bitmap's
+
+		//Respeitar o limite de bitmaps definido nas configurações
+		if($amount > env('AMOUNT_BITMAPS'))
+			$amount = env('AMOUNT_BITMAPS');
+
+		$bitmap = str_pad('', 64 * $amount, '0');
+
+		$init = 1; //Quantidade inicial de execução
+		$active = 0; //Posição dentro do bitmap
+
+		//Deixa as posições dos bit ativos que indicam a presença de outros map's na mensagem
+		while($init < $amount)
 		{
-			$index = '1';
+			$bitmap[$active] = '1';
 
-			if($i == $this->count_bitmap)
-				$index = '0';
-
-			$bitmap = str_pad('', 64, '0');
-			$bitmap[0] = $index;
-
-			$bitmaps .= $bitmap;
+			$active += 64;
+			$init++;
 		}
 
-		//SETA A POSIÇÃO DOS BITMAP
-		foreach($this->bits as $key => $bit)
+		//Seta os bit dentro do bitmap
+		foreach($bits as $key => $detail)
 		{
-			$bitmaps[$key - 1] = 1;
+			//Subtração necessária para seguir o padrão de chaves da array que começa a partir do zero
+			$bit = $key - 1;
+
+			//Só marca como ativo o bit na mapa quando localizada a posição dentro do mesmo
+			isset($bitmap[$bit]) ? $bitmap[$bit] = '1' : false;
 		}
 
-		$count = 64 * $this->count_bitmap; //CALCULO QUANTOS BITMAPS VOU CONVERTER
-		$bitmap = str_pad('', (16 * $this->count_bitmap), 0); //MONTO O TAMANHO DE BITMAP (HEXADECIMAL)
-		$bitmap_position = 0; //VARIÁVEL PARA CONTAGEM (POSICIONAR CORRETAMENTE OS BYTES)
+		$bitmap = str_split($bitmap); //Separa os caracteres do bitmap
+		$return = null; //Armazena a string do bitmap convertido
+		$bit = null; //Monta cada byte convertido em hexa
+		$sum = 0; //Contador
 
-		//USO O CALCULO DE TODOS OS BITMAPS E VOU CONVERTENDO DE 4 EM 4 FECHANDO NO TOTAL DE 16 LOOPS (SE CASO 1 BITMAP)
-		for($i = 0;$i < $count;$i++)
+		//Converte em hexadecimal
+		foreach($bitmap as $byte)
 		{
-			$format = $bitmaps[$i] . $bitmaps[$i + 1] . $bitmaps[$i + 2] . $bitmaps[$i + 3];
-			$bitmap[$bitmap_position] = base_convert($format, 2, 16);
-			$i += 3;
-			$bitmap_position++;
+			$bit .= $byte; //Armazena o byte
+			$sum++; //Acrescenta mais um
+
+			//Quando chegar em 4 bytes
+			if($sum == 4)
+			{
+				//Converte o byte em hexadecimal
+				$return .= base_convert($bit, 2, 16);
+				$sum = 0; //Limpa o contador
+				$bit = null; //Limpa a variável do byte
+			}
 		}
 
-		return $bitmap;
+		//Deixa a string em maiúsculo
+		$return = strtoupper($return);
+
+		return $return;
 	}
 
-	//MONTA A MENSAGEM DE RETORNO
+	//Monta a mensagem de retorno
 	public function getIso()
 	{
 		$mti = $this->mti;
-		$bitmap = $this->make_bitmap();
+		$bitmap = $this->makeBitmap();
 		$content = null;
 
 		foreach($this->bits as $bit)
-			$content .= $bit['length'] . $bit['content'];
+			$content .= $bit[1] . $bit[2];
 
 		return $mti . $bitmap . $content;
 	}
