@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Paynet;
+namespace App\NovvoDesign;
 
-use App\Isos\Paynet;
+use App\Isos\NovvoDesign;
 use App\Parser;
 
 //MESSAGES
-use App\Paynet\Messages\CommunicationTest as PaynetCommunicationTest;
+use App\NovvoDesign\Messages\CommunicationTest;
 
 class ResolveMessage
 {
@@ -18,12 +18,12 @@ class ResolveMessage
 		$isoParser->setMessage($message);
 
 		//Iso que será utilizada para realizar o parse
-		$isoParser->setIso(Paynet::getIso());
+		$isoParser->setIso(NovvoDesign::getIso());
 
 		switch ($isoParser->getMTI())
 		{
 			case '0800':
-				return (new PaynetCommunicationTest($isoParser))->process();
+				return (new CommunicationTest($isoParser))->process();
 				break;
 			
 			default:

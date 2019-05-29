@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Paynet\Messages;
+namespace App\NovvoDesign\Messages;
 
 use App\Parser;
-use App\Isos\Paynet;
+use App\Isos\NovvoDesign;
 
-class CommunicationTest extends Parser
+class CommunicationTest
 {
 	protected $parser;
 	protected $successful = true;
@@ -17,7 +17,7 @@ class CommunicationTest extends Parser
 
 	public function success()
 	{
-		$iso = new Parser(Paynet::getIso());
+		$iso = new Parser(NovvoDesign::getIso());
 
 		$iso->addMTI('0810');
 		$iso->addBit(7, $this->parser->getBit(7));
@@ -34,7 +34,7 @@ class CommunicationTest extends Parser
 
 	public function error()
 	{
-		$iso = new Parser(Paynet::getIso());
+		$iso = new Parser(NovvoDesign::getIso());
 
 		$iso->addMTI('0810');
 		$iso->addBit(7, $this->parser->getBit(7));

@@ -2,7 +2,7 @@
 
 namespace App;
 
-use App\Paynet\ResolveMessage as Paynet;
+use App\NovvoDesign\ResolveMessage as NovvoDesign;
 
 class Router
 {
@@ -14,8 +14,7 @@ class Router
 		switch ($header)
 		{
 			case 'empty':
-				$resolve = new Paynet();
-				return $resolve->resolve($message);
+				return (new NovvoDesign())->resolve($message);
 				break;
 			
 			default:

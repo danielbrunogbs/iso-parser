@@ -1,14 +1,8 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: leandroandreaci
- * Date: 02/08/18
- * Time: 17:55
- */
 
 namespace App\Isos;
 
-class Paynet
+class NovvoDesign
 {
 
     const VARIABLE_LENGTH = TRUE;
